@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Logs</title>
+    <style>
+        body {
+            font-family: monospace;
+            background: #1e1e1e;
+            color: #ffffff;
+        }
+        .log-window {
+            background: #111;
+            color: #0f0;
+            padding: 10px;
+            margin: 20px 0;
+            height: 300px;
+            overflow-y: scroll;
+            border: 1px solid #333;
+            white-space: pre-wrap; /* <-- Add this line */
+        }
+        .status-ball {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ff0;
+            margin-left: 8px;
+            vertical-align: middle;
+            visibility: hidden;
+        }
+    </style>
+</head>
+<body>
+    <h1>Real-Time Logs</h1>
+    <button id="toggle-order" style="margin-bottom: 20px;">Show Newest First</button>
+    <div id="commit-info" style="margin-bottom: 20px; color: #ff0;">Loading last commit...</div>
+    <div><strong>Pool</strong> <span class="status-ball" id="pool-status"></span></div>
+    <div class="log-window" id="pool-log">Loading Pool Logs...</div>
+    <div><strong>JD Server</strong> <span class="status-ball" id="jd-server-status"></span></div>
+    <div class="log-window" id="jd-server-log">Loading JD Server Logs...</div>
+    <div><strong>JD Client</strong> <span class="status-ball" id="jd-client-status"></span></div>
+    <div class="log-window" id="jd-client-log">Loading JD Client Logs...</div>
+    <div><strong>Translator</strong> <span class="status-ball" id="translator-status"></span></div>
+    <div class="log-window" id="translator-log">Loading Translator Logs...</div>
+    <div><strong>Minerd</strong> <span class="status-ball" id="minerd-status"></span></div>
+    <div class="log-window" id="minerd-log">Loading Minerd Logs...</div>
+
+    <script>
+        const services = ['pool', 'jd-server', 'jd-client', 'translator', 'minerd'];
+        let reverseOrder = false;
+        const toggleBtn = document.getElementById('toggle-order');
+        toggleBtn.addEventListener('click', () => {
+            reverseOrder = !reverseOrder;
+            toggleBtn.textContent = reverseOrder ? 'Show Oldest First' : 'Show Newest First';
+            fetchLogs();
+        });
+
+        function parseTimestamp(line) {
+            // Example: 2025-07-01T06:10:50.290434Z
+            const match = line.match(/(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z)/);
+            if (match) {
+                return new Date(match[1]);
+            }
+            return null;
+        }
+
+        function checkLogStatus(service, lines) {
+            // Find the last non-empty line with a timestamp, depending on log order
+            let idxs = reverseOrder
+                ? [...Array(lines.length).keys()] // 0 to N-1
+                : [...Array(lines.length).keys()].reverse(); // N-1 to 0
+            for (let i of idxs) {
+                const ts = parseTimestamp(lines[i]);
+                if (ts) {
+                    const now = new Date();
+                    const diff = (now - ts) / 1000; // seconds
+                    const ball = document.getElementById(`${service}-status`);
+                    if (diff > 300) {
+                        ball.style.visibility = 'visible';
+                    } else {
+                        ball.style.visibility = 'hidden';
+                    }
+                    return;
+                }
+            }
+            // If no timestamp found, hide ball
+            document.getElementById(`${service}-status`).style.visibility = 'hidden';
+        }
+
+        // Fetch logs every 2 seconds
+        function fetchLogs() {
+            services.forEach(service => {
+                fetch(`/logs/${service}`)
+                    .then(res => res.text())
+                    .then(text => {
+                        let lines = text.split('\n');
+                        if (reverseOrder) lines = lines.reverse();
+                        document.getElementById(`${service}-log`).textContent = lines.join('\n');
+                        checkLogStatus(service, lines);
+                    })
+                    .catch(error => console.error('Error fetching log:', error));
+            });
+        }
+
+        // Fetch last commit hash
+        function fetchCommit() {
+            fetch('/last_commit')
+                .then(res => res.text())
+                .then(text => {
+                    document.getElementById('commit-info').textContent = 'Last Commit: ' + text.trim();
+                })
+                .catch(() => {
+                    document.getElementById('commit-info').textContent = 'Last Commit: (not available)';
+                });
+        }
+
+        // Fetch logs and commit info on page load and then periodically
+        fetchLogs();
+        fetchCommit();
+        setInterval(fetchLogs, 2000); // Refresh logs every 2 seconds
+        setInterval(fetchCommit, 10000); // Refresh commit every 10 seconds
+    </script>
+</body>
+</html>
