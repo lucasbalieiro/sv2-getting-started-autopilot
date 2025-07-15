@@ -13,16 +13,16 @@ use tokio::{
 
 use axum::{
     Router,
+    extract::Query,
     response::{
         Html, Sse,
         sse::{Event, KeepAlive},
     },
     routing::get,
-    extract::Query,
 };
 use futures_util::{Stream, stream};
-use tracing::{error, info};
 use std::collections::HashMap as StdHashMap;
+use tracing::{error, info};
 
 #[tokio::main]
 async fn main() {
@@ -77,10 +77,12 @@ fn is_newest_first(query: &StdHashMap<String, String>) -> bool {
 }
 
 // Update all SSE endpoints to accept Query<HashMap<String, String>>
-pub async fn sse_tp_logs(Query(params): Query<StdHashMap<String, String>>) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
+pub async fn sse_tp_logs(
+    Query(params): Query<StdHashMap<String, String>>,
+) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
     let file_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("template-provider")
-        .join("bitcoin-sv2-tp-0.1.15")
+        .join("bitcoin-sv2-tp-0.1.19")
         .join(".bitcoin")
         .join("testnet4")
         .join("debug.log");
@@ -89,7 +91,9 @@ pub async fn sse_tp_logs(Query(params): Query<StdHashMap<String, String>>) -> Ss
     Sse::new(log_stream).keep_alive(KeepAlive::new())
 }
 
-pub async fn sse_pool_logs(Query(params): Query<StdHashMap<String, String>>) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
+pub async fn sse_pool_logs(
+    Query(params): Query<StdHashMap<String, String>>,
+) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
     let file_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("stratum")
         .join("roles")
@@ -100,7 +104,9 @@ pub async fn sse_pool_logs(Query(params): Query<StdHashMap<String, String>>) -> 
     Sse::new(log_stream).keep_alive(KeepAlive::new())
 }
 
-pub async fn sse_jds_logs(Query(params): Query<StdHashMap<String, String>>) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
+pub async fn sse_jds_logs(
+    Query(params): Query<StdHashMap<String, String>>,
+) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
     let file_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("stratum")
         .join("roles")
@@ -111,7 +117,9 @@ pub async fn sse_jds_logs(Query(params): Query<StdHashMap<String, String>>) -> S
     Sse::new(log_stream).keep_alive(KeepAlive::new())
 }
 
-pub async fn sse_jdc_logs(Query(params): Query<StdHashMap<String, String>>) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
+pub async fn sse_jdc_logs(
+    Query(params): Query<StdHashMap<String, String>>,
+) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
     let file_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("stratum")
         .join("roles")
@@ -122,7 +130,9 @@ pub async fn sse_jdc_logs(Query(params): Query<StdHashMap<String, String>>) -> S
     Sse::new(log_stream).keep_alive(KeepAlive::new())
 }
 
-pub async fn sse_translator_logs(Query(params): Query<StdHashMap<String, String>>) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
+pub async fn sse_translator_logs(
+    Query(params): Query<StdHashMap<String, String>>,
+) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
     let file_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("stratum")
         .join("roles")
@@ -133,7 +143,9 @@ pub async fn sse_translator_logs(Query(params): Query<StdHashMap<String, String>
     Sse::new(log_stream).keep_alive(KeepAlive::new())
 }
 
-pub async fn sse_minerd_logs(Query(params): Query<StdHashMap<String, String>>) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
+pub async fn sse_minerd_logs(
+    Query(params): Query<StdHashMap<String, String>>,
+) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
     let file_path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("minerd.log");
     let newest_first = is_newest_first(&params);
     let log_stream = tail_file_lines(file_path, newest_first).await;
@@ -245,7 +257,7 @@ fn initial_config() {
 
     let tp_log_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("template-provider")
-        .join("bitcoin-sv2-tp-0.1.15")
+        .join("bitcoin-sv2-tp-0.1.19")
         .join(".bitcoin")
         .join("testnet4")
         .join("debug.log");
@@ -378,11 +390,14 @@ async fn run_roles(
     Ok(())
 }
 
-async fn tail_file_lines(path: PathBuf, newest_first: bool) -> impl Stream<Item = Result<Event, Infallible>> {
+async fn tail_file_lines(
+    path: PathBuf,
+    newest_first: bool,
+) -> impl Stream<Item = Result<Event, Infallible>> {
+    use std::time::Duration;
+    use tokio::time::interval;
     use tokio_stream::StreamExt;
     use tokio_stream::wrappers::IntervalStream;
-    use tokio::time::interval;
-    use std::time::Duration;
 
     let interval = interval(Duration::from_secs(2));
     let stream = IntervalStream::new(interval);
@@ -395,7 +410,7 @@ async fn tail_file_lines(path: PathBuf, newest_first: bool) -> impl Stream<Item 
                 Ok(f) => f,
                 Err(_) => {
                     sleep(Duration::from_secs(2)).await;
-                    return Some((Ok(Event::default().data("Waiting for file...")), stream)); 
+                    return Some((Ok(Event::default().data("Waiting for file...")), stream));
                 }
             };
             let mut reader = BufReader::new(file).lines();
