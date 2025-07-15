@@ -1,38 +1,4 @@
-:80
-
-root * ./
-
-handle_path /logs/pool {
-    file_server browse
-    rewrite * /pool.log
+:80 {
+    reverse_proxy localhost:3000
 }
 
-handle_path /logs/jd-server {
-    file_server browse
-    rewrite * /jd-server.log
-}
-
-handle_path /logs/jd-client {
-    file_server browse
-    rewrite * /jd-client.log
-}
-
-handle_path /logs/translator {
-    file_server browse
-    rewrite * /translator.log
-}
-
-handle_path /logs/minerd {
-    file_server browse
-    rewrite * /minerd.log
-}
-
-handle_path /last_commit {
-    file_server browse
-    rewrite * /last_commit.txt
-}
-
-handle {
-    root * ./web
-    file_server
-}
