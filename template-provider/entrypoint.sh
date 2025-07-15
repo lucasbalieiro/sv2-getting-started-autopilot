@@ -2,9 +2,9 @@
 
 set -e
 
-FILENAME="bitcoin-sv2-tp-0.1.15-x86_64-linux-gnu.tar.gz"
-EXPECTED_HASH_FILE_URL="https://raw.githubusercontent.com/Sjors/guix.sigs/refs/heads/sv2/sv2-tp-0.1.15/Sjors/noncodesigned.SHA256SUMS"
-DOWNLOAD_URL="https://github.com/Sjors/bitcoin/releases/download/sv2-tp-0.1.15/bitcoin-sv2-tp-0.1.15-x86_64-linux-gnu.tar.gz"
+FILENAME="bitcoin-sv2-tp-0.1.19-x86_64-linux-gnu.tar.gz"
+EXPECTED_HASH_FILE_URL="https://raw.githubusercontent.com/Sjors/guix.sigs/refs/heads/sv2/sv2-tp-0.1.19/Sjors/noncodesigned.SHA256SUMS"
+DOWNLOAD_URL="https://github.com/Sjors/bitcoin/releases/download/sv2-tp-0.1.19/bitcoin-sv2-tp-0.1.19-x86_64-linux-gnu.tar.gz"
 
 # Step 1: Make sure the tar.gz file exists, download if not
 if [ ! -f "$FILENAME" ]; then
@@ -54,10 +54,10 @@ fi
 # Step 6: Unzip chain.zip to get blocks and chainstate only if not already unzipped
 if [ ! -d "$DATADIR/testnet4/blocks" ] || [ ! -d "$DATADIR/testnet4/chainstate" ]; then
     echo "Unzipping chain.zip to $DATADIR/testnet4/..."
-    unzip -q chain.zip -d "$DATADIR/testnet4/"
+    tar xvf chain.tar.gz -C "$DATADIR/testnet4/"
 else
     echo "Blocks and chainstate already exist in $DATADIR/testnet4/, skipping unzip."
 fi
 
 # Step 7: Start bitcoind with SV2 support
-./$EXTRACTED_DIR/bin/bitcoind -testnet4 -sv2 -sv2port=8442 -debug=sv2 -datadir="$DATADIR" > "$PWD/bitcoind.log" 2>&1 &
+./$EXTRACTED_DIR/bin/bitcoind -daemon -testnet4 -sv2 -sv2port=8442 -debug=sv2 -datadir="$DATADIR"

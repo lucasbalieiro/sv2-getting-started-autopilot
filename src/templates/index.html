@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SV2 Getting Started Autopilot</title>
+    <style>
+        body {
+            font-family: monospace;
+            background: #1e1e1e;
+            color: #ffffff;
+        }
+
+        .log-window {
+            background: #111;
+            color: #0f0;
+            padding: 10px;
+            margin: 20px 0;
+            height: 300px;
+            overflow-y: scroll;
+            border: 1px solid #333;
+            white-space: pre-wrap;
+        }
+
+        .status-ball {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ff0;
+            margin-left: 8px;
+            vertical-align: middle;
+            visibility: hidden;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.6/dist/htmx.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/htmx-ext-sse@2.2.2" crossorigin="anonymous"></script>
+
+</head>
+
+<body>
+    <h1>SV2 Getting Started Autopilot</h1>
+    <button id="toggle-all-order" style="margin-bottom: 20px;" onclick="toggleLogOrder()">Show Newest First</button>
+    <div hx-get="/last-commit"
+        hx-trigger="load"
+        hx-swap="innerHTML"
+        style="margin-bottom: 20px; color: #ff0;">Loading last commit...</div>
+
+    <div><strong>TP - v0.1.5 - Testnet4 - non-IPC</strong> <span class="status-ball"></span></div>
+    <div hx-ext="sse" sse-connect="sse-tp-logs?order=oldest" sse-swap="message" class="log-window" id="tp-log">Loading TP Logs...
+    </div>
+
+    <div><strong>Pool</strong> <span class="status-ball"></span></div>
+    <div hx-ext="sse" sse-connect="sse-pool-logs?order=oldest" sse-swap="message" class="log-window" id="pool-log">Loading Pool Logs...</div>
+
+    <div><strong>JD Server</strong> <span class="status-ball"></span></div>
+    <div hx-ext="sse" sse-connect="sse-jds-logs?order=oldest" sse-swap="message" class="log-window" id="jds-log">Loading JD Server Logs...</div>
+
+    <div><strong>JD Client</strong> <span class="status-ball" id="jd-client-status"></span></div>
+    <div hx-ext="sse" sse-connect="sse-jdc-logs?order=oldest" sse-swap="message" class="log-window" id="jd-client-log">Loading JD Client Logs...</div>
+
+    <div><strong>Translator</strong> <span class="status-ball" id="translator-status"></span></div>
+    <div hx-ext="sse" sse-connect="sse-translator-logs?order=oldest" sse-swap="message" class="log-window" id="translator-log">Loading Translator Logs...</div>
+
+    <!-- <div><strong>Minerd</strong> <span class="status-ball" id="minerd-status"></span></div>
+    <div hx-ext="sse" sse-connect="sse-minerd-logs" sse-swap="message" class="log-window" id="minerd-log">Loading Minerd Logs...</div>
+ -->
+
+    <script>
+        let newestFirst = false;
+        function toggleLogOrder() {
+            newestFirst = !newestFirst;
+            reorderAllLogs();
+            document.getElementById('toggle-all-order').innerText = newestFirst ? 'Show Oldest First' : 'Show Newest First';
+            updateSSEOrder();
+        }
+
+        function reorderAllLogs() {
+            const logWindows = document.querySelectorAll('.log-window');
+            logWindows.forEach(logWindow => {
+                const lines = logWindow.innerText.split('\n');
+                if (lines.length > 1) {
+                    logWindow.innerText = newestFirst ? lines.reverse().join('\n') : lines.reverse().join('\n');
+                }
+            });
+        }
+
+        function updateSSEOrder() {
+            const order = newestFirst ? 'newest' : 'oldest';
+            const sseIds = [
+                'tp-log',
+                'pool-log',
+                'jds-log',
+                'jd-client-log',
+                'translator-log'
+            ];
+            sseIds.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    const base = el.getAttribute('sse-connect').split('?')[0];
+                    const newEl = el.cloneNode(true);
+                    newEl.setAttribute('sse-connect', base + '?order=' + order);
+                    el.parentNode.replaceChild(newEl, el);
+                    if (window.htmx) {
+                        window.htmx.process(newEl);
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+
+</html>
