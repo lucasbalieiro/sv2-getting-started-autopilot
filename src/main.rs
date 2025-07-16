@@ -310,6 +310,7 @@ async fn run_roles(
         .arg("-f")
         .arg("jd-client.log")
         .current_dir(&project_path.join("jd-client"))
+        .env("RUST_LOG", "debug")
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .spawn()?;
@@ -328,6 +329,7 @@ async fn run_roles(
         .arg("-f")
         .arg("jd-server.log")
         .current_dir(&project_path.join("jd-server"))
+        .env("RUST_LOG", "debug")
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .spawn()?;
@@ -346,6 +348,7 @@ async fn run_roles(
         .arg("-f")
         .arg("pool.log")
         .current_dir(&project_path.join("pool"))
+        .env("RUST_LOG", "debug")
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .spawn()?;
@@ -361,6 +364,7 @@ async fn run_roles(
         .arg("-f")
         .arg("translator.log")
         .current_dir(&project_path.join("translator"))
+        .env("RUST_LOG", "debug")
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .spawn()?;
