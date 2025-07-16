@@ -360,7 +360,7 @@ async fn run_roles(
         .arg("--release")
         .arg("--")
         .arg("--config")
-        .arg("config-examples/tproxy-config-local-pool-example.toml")
+        .arg("config-examples/tproxy-config-local-jdc-example.toml")
         .arg("-f")
         .arg("translator.log")
         .current_dir(&project_path.join("translator"))
