@@ -82,10 +82,7 @@ pub async fn sse_tp_logs(
 ) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
     let file_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("template-provider")
-        .join("bitcoin-sv2-tp-0.1.19")
-        .join(".bitcoin")
-        .join("testnet4")
-        .join("debug.log");
+        .join("sv2_tp.log");
     let newest_first = is_newest_first(&params);
     let log_stream = tail_file_lines(file_path, newest_first).await;
     Sse::new(log_stream).keep_alive(KeepAlive::new())
@@ -257,10 +254,7 @@ fn initial_config() {
 
     let tp_log_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("template-provider")
-        .join("bitcoin-sv2-tp-0.1.19")
-        .join(".bitcoin")
-        .join("testnet4")
-        .join("debug.log");
+        .join("sv2_tp.log");
     if let Err(e) = std::fs::write(&tp_log_path, "") {
         error!("Failed to clear TP log file: {}", e);
     } else {
@@ -300,24 +294,40 @@ async fn run_roles(
 ) -> std::io::Result<()> {
     use std::process::Stdio;
     use tokio::process::Command;
-    // JD Client role
-    let jd_client = Command::new("cargo")
+
+    // TP role
+    let tp_log_file = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("template-provider")
+        .join("sv2_tp.log");
+    let tp_bin = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("template-provider")
+        .join("sv2-tp");
+    let tp = Command::new(tp_bin)
+        .arg("-signet")
+        .arg("-debug=sv2")
+        .arg("-sv2port=8442")
+        .arg("-loglevel=sv2:trace")
+        .arg(format!("-debuglogfile={}", tp_log_file.to_str().unwrap()))
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()?;
+    roles.lock().unwrap().insert("tp".to_string(), tp);
+
+    // Pool role
+    let pool = Command::new("cargo")
         .arg("run")
         .arg("--release")
         .arg("--")
         .arg("--config")
-        .arg("config-examples/jdc-config-local-example.toml")
+        .arg("config-examples/pool-config-local-tp-example.toml")
         .arg("-f")
-        .arg("jd-client.log")
-        .current_dir(&project_path.join("jd-client"))
+        .arg("pool.log")
+        .current_dir(&project_path.join("pool"))
         .env("RUST_LOG", "debug")
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .spawn()?;
-    roles
-        .lock()
-        .unwrap()
-        .insert("jd-client".to_string(), jd_client);
+    roles.lock().unwrap().insert("pool".to_string(), pool);
 
     // JD Server role
     let jd_server = Command::new("cargo")
@@ -338,21 +348,24 @@ async fn run_roles(
         .unwrap()
         .insert("jd-server".to_string(), jd_server);
 
-    // Pool role
-    let pool = Command::new("cargo")
+    // JD Client role
+    let jd_client = Command::new("cargo")
         .arg("run")
         .arg("--release")
         .arg("--")
         .arg("--config")
-        .arg("config-examples/pool-config-local-tp-example.toml")
+        .arg("config-examples/jdc-config-local-example.toml")
         .arg("-f")
-        .arg("pool.log")
-        .current_dir(&project_path.join("pool"))
+        .arg("jd-client.log")
+        .current_dir(&project_path.join("jd-client"))
         .env("RUST_LOG", "debug")
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .spawn()?;
-    roles.lock().unwrap().insert("pool".to_string(), pool);
+    roles
+        .lock()
+        .unwrap()
+        .insert("jd-client".to_string(), jd_client);
 
     // translator role
     let translator = Command::new("cargo")
